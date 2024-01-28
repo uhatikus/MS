@@ -94,8 +94,8 @@ if __name__ == "__main__":
 
     ## Training
     # ===============================
-    # if cf.retrain:
-    #     trainer.train()
+    if cf.retrain:
+        trainer.train()
 
     ## Evaluation
     # ===============================
