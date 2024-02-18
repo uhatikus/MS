@@ -100,7 +100,6 @@ pycparser = "*"
 name = "colorama"
 version = "0.4.6"
 description = "Cross-platform colored terminal text."
-category = "main"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
 files = [
@@ -130,7 +129,6 @@ test = ["pytest"]
 name = "contourpy"
 version = "1.2.0"
 description = "Python library for calculating contours of 2D quadrilateral grids"
-category = "main"
 optional = false
 python-versions = ">=3.9"
 files = [
@@ -194,7 +192,6 @@ test-no-images = ["pytest", "pytest-cov", "pytest-xdist", "wurlitzer"]
 name = "cycler"
 version = "0.12.1"
 description = "Composable style cycles"
-category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -284,7 +281,6 @@ tests = ["asttokens (>=2.1.0)", "coverage", "coverage-enable-subprocess", "ipyth
 name = "filelock"
 version = "3.13.1"
 description = "A platform independent file lock."
-category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -301,7 +297,6 @@ typing = ["typing-extensions (>=4.8)"]
 name = "fonttools"
 version = "4.47.2"
 description = "Tools to manipulate font files"
-category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -367,7 +362,6 @@ woff = ["brotli (>=1.0.1)", "brotlicffi (>=0.8.0)", "zopfli (>=0.1.4)"]
 name = "fsspec"
 version = "2023.12.2"
 description = "File-system specification"
-category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -494,7 +488,6 @@ testing = ["Django", "attrs", "colorama", "docopt", "pytest (<7.0.0)"]
 name = "jinja2"
 version = "3.1.3"
 description = "A very fast and expressive template engine."
-category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -556,7 +549,6 @@ test = ["ipykernel", "pre-commit", "pytest", "pytest-cov", "pytest-timeout"]
 name = "kiwisolver"
 version = "1.4.5"
 description = "A fast implementation of the Cassowary constraint solver"
-category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -670,7 +662,6 @@ files = [
 name = "markupsafe"
 version = "2.1.3"
 description = "Safely add untrusted strings to HTML/XML markup."
-category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -740,7 +731,6 @@ files = [
 name = "matplotlib"
 version = "3.8.2"
 description = "Python plotting package"
-category = "main"
 optional = false
 python-versions = ">=3.9"
 files = [
@@ -804,7 +794,6 @@ traitlets = "*"
 name = "mpmath"
 version = "1.3.0"
 description = "Python library for arbitrary-precision floating-point arithmetic"
-category = "main"
 optional = false
 python-versions = "*"
 files = [
@@ -834,7 +823,6 @@ files = [
 name = "networkx"
 version = "3.2.1"
 description = "Python package for creating and manipulating graphs and networks"
-category = "main"
 optional = false
 python-versions = ">=3.9"
 files = [
@@ -853,7 +841,6 @@ test = ["pytest (>=7.2)", "pytest-cov (>=4.0)"]
 name = "numpy"
 version = "1.26.3"
 description = "Fundamental package for array computing in Python"
-category = "main"
 optional = false
 python-versions = ">=3.9"
 files = [
@@ -899,7 +886,6 @@ files = [
 name = "nvidia-cublas-cu12"
 version = "12.1.3.1"
 description = "CUBLAS native runtime libraries"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -911,7 +897,6 @@ files = [
 name = "nvidia-cuda-cupti-cu12"
 version = "12.1.105"
 description = "CUDA profiling tools runtime libs."
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -923,7 +908,6 @@ files = [
 name = "nvidia-cuda-nvrtc-cu12"
 version = "12.1.105"
 description = "NVRTC native runtime libraries"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -935,7 +919,6 @@ files = [
 name = "nvidia-cuda-runtime-cu12"
 version = "12.1.105"
 description = "CUDA Runtime native Libraries"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -947,7 +930,6 @@ files = [
 name = "nvidia-cudnn-cu12"
 version = "8.9.2.26"
 description = "cuDNN runtime libraries"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -961,7 +943,6 @@ nvidia-cublas-cu12 = "*"
 name = "nvidia-cufft-cu12"
 version = "11.0.2.54"
 description = "CUFFT native runtime libraries"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -973,7 +954,6 @@ files = [
 name = "nvidia-curand-cu12"
 version = "10.3.2.106"
 description = "CURAND native runtime libraries"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -985,7 +965,6 @@ files = [
 name = "nvidia-cusolver-cu12"
 version = "11.4.5.107"
 description = "CUDA solver native runtime libraries"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -1002,7 +981,6 @@ nvidia-nvjitlink-cu12 = "*"
 name = "nvidia-cusparse-cu12"
 version = "12.1.0.106"
 description = "CUSPARSE native runtime libraries"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -1017,7 +995,6 @@ nvidia-nvjitlink-cu12 = "*"
 name = "nvidia-nccl-cu12"
 version = "2.18.1"
 description = "NVIDIA Collective Communication Library (NCCL) Runtime"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -1028,7 +1005,6 @@ files = [
 name = "nvidia-nvjitlink-cu12"
 version = "12.3.101"
 description = "Nvidia JIT LTO Library"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -1040,7 +1016,6 @@ files = [
 name = "nvidia-nvtx-cu12"
 version = "12.1.105"
 description = "NVIDIA Tools Extension"
-category = "main"
 optional = false
 python-versions = ">=3"
 files = [
@@ -1052,7 +1027,6 @@ files = [
 name = "packaging"
 version = "23.2"
 description = "Core utilities for Python packages"
-category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1095,7 +1069,6 @@ ptyprocess = ">=0.5"
 name = "pillow"
 version = "10.2.0"
 description = "Python Imaging Library (Fork)"
-category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1296,7 +1269,6 @@ windows-terminal = ["colorama (>=0.4.6)"]
 name = "pyparsing"
 version = "3.1.1"
 description = "pyparsing module - Classes and methods to define and execute parsing grammars"
-category = "main"
 optional = false
 python-versions = ">=3.6.8"
 files = [
@@ -1311,7 +1283,6 @@ diagrams = ["jinja2", "railroad-diagrams"]
 name = "python-dateutil"
 version = "2.8.2"
 description = "Extensions to the standard Python datetime module"
-category = "main"
 optional = false
 python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,>=2.7"
 files = [
@@ -1517,7 +1488,6 @@ cffi = {version = "*", markers = "implementation_name == \"pypy\""}
 name = "six"
 version = "1.16.0"
 description = "Python 2 and 3 compatibility utilities"
-category = "main"
 optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*"
 files = [
@@ -1549,7 +1519,6 @@ tests = ["cython", "littleutils", "pygments", "pytest", "typeguard"]
 name = "sympy"
 version = "1.12"
 description = "Computer algebra system (CAS) in Python"
-category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
@@ -1564,7 +1533,6 @@ mpmath = ">=0.19"
 name = "torch"
 version = "2.1.2"
 description = "Tensors and Dynamic neural networks in Python with strong GPU acceleration"
-category = "main"
 optional = false
 python-versions = ">=3.8.0"
 files = [
@@ -1639,7 +1607,6 @@ files = [
 name = "tqdm"
 version = "4.66.1"
 description = "Fast, Extensible Progress Meter"
-category = "main"
 optional = false
 python-versions = ">=3.7"
 files = [
@@ -1676,7 +1643,6 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 name = "triton"
 version = "2.1.0"
 description = "A language and compiler for custom Deep Learning operations"
-category = "main"
 optional = false
 python-versions = "*"
 files = [
@@ -1702,7 +1668,6 @@ tutorials = ["matplotlib", "pandas", "tabulate"]
 name = "typing-extensions"
 version = "4.9.0"
 description = "Backported and Experimental Type Hints for Python 3.8+"
-category = "main"
 optional = false
 python-versions = ">=3.8"
 files = [
