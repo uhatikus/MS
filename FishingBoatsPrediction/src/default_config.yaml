@@ -1,0 +1,7 @@
+retrain: True
+tb_log: False
+device: cpu # gpu or cpu
+max_epochs: 50
+batch_size: 32
+n_samples: 16
+learning_rate: 0.0006
