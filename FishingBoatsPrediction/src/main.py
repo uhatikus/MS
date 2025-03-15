@@ -1,10 +1,5 @@
 from clearml import Task
-import torch
-import numpy as np
-
-def set_seed(seed):
-    torch.manual_seed(seed)
-    np.random.seed(seed)
+from utils import set_seed
 
 set_seed(42)
 

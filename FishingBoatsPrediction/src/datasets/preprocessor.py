@@ -3,11 +3,13 @@ import pandas as pd
 import glob
 from typing import List, Dict
 import plotly.express as px
+import pickle
 
 import numpy as np
 from pyproj import CRS, Transformer
+from utils import set_seed
 
-np.random.seed(42)
+set_seed(42)
 
 # Define the Coordinate Reference Systems
 crs_geodetic = CRS.from_epsg(4326)  # WGS84
@@ -36,17 +38,24 @@ class AISColumnNames:
     n_Heading: str = "norm Heading"
     
     is_synthetic: str = "is_synthetic"
+    to_predict: str = "to_predict"
     
 class AISPreprocessor:
     def __init__(self,
                  dataset_path: str = '../../data/fishing_boats_dynamic/Dynamic_*.csv',
                  target_freq_in_minutes: int = 10,
-                 min_trajectory_sequence_len: int = 96,
+                 trajectory_sequence_len: int = 16, #96
+                 max_trajectory_sequence_len_to_predict: int = 8,
+                 min_trajectory_sequence_len_to_predict: int = 4,
                  rotate_trajetories: bool = True,
-                 shitf_trajectories: bool = True,
+                 shitf_trajectories: bool = False,
                  cols = AISColumnNames(),
                  latlon_scale: float = None, 
-                 synthetic_ratio: float = 0.7):
+                 synthetic_ratio: float = 0.7,
+                 prediction_buffer: int = 1, 
+                 validation_size_ratio: float = 0.15, # from 0 to 1
+                 test_size_ratio: float = 0.15, # from 0 to 1
+                 ):
         
         self.dataset_path: str = dataset_path        
         self.dynamic_data_files = glob.glob(self.dataset_path)
@@ -54,7 +63,7 @@ class AISPreprocessor:
         self.target_freq: str = f"{target_freq_in_minutes}min"
         self.sample_T: pd.Timedelta = pd.Timedelta(minutes=target_freq_in_minutes)
         
-        self.min_trajectory_sequence_len: int = min_trajectory_sequence_len
+        self.trajectory_sequence_len: int = trajectory_sequence_len
         self.rotate_trajetories: bool = rotate_trajetories
         self.shitf_trajectories: bool = shitf_trajectories
         self.synthesize_flag: bool = self.rotate_trajetories or self.shitf_trajectories
@@ -65,7 +74,18 @@ class AISPreprocessor:
         self.n_synthetic_per_trajectory = int(self.n_synthetic)
         self.n_synthetic_probabilistic = self.n_synthetic % 1
         
+        self.prediction_buffer = prediction_buffer
+        self.max_trajectory_sequence_len_to_predict = max_trajectory_sequence_len_to_predict
+        self.min_trajectory_sequence_len_to_predict = min_trajectory_sequence_len_to_predict
+        
+        self.validation_size_ratio = validation_size_ratio
+        self.test_size_ratio = test_size_ratio
+        
         self.min_lat, self.max_lat, self.min_lon, self.max_lon, self.max_pseudo_lon = None, None, None, None, None
+        self.local_lat_scale, self.local_lon_scale , self.local_pseudo_lon_scale = None, None, None
+        
+        self.feature_cols = [self.cols.n_Latitude, self.cols.n_Longitude, self.cols.n_SOG, self.cols.n_COG]
+            
     
     def run(self):
         all_boats_trajectories: Dict[str, pd.DataFrame] = self.read_all_boats_trajectories() # Dict {mmsi: pd.DataFrame with trajectory}
@@ -81,15 +101,71 @@ class AISPreprocessor:
         
         good_trajectories.extend(synthesized_trajectories)
         
-        # for i, t in enumerate(good_trajectories):
-        #     self.display_trajectory(t, i)
-            
         self.get_latlon_box(good_trajectories)
         normalized_trajectories: List[pd.DataFrame] = self.get_normalized_trajectories(good_trajectories)
+        
+        normalized_trajectories: List[pd.DataFrame] = self.create_prediction_masks(normalized_trajectories)
 
-        for i, t in enumerate(normalized_trajectories):
-            t.to_csv(f"data/preprocessed_data/{i}.csv", index=False)
-            # break
+        # for i, t in enumerate(good_trajectories):
+        #     self.display_trajectory(t, i, base_path="data/good_trajectories_with_norms/ship_trajectory_")
+        
+        # for i, t in enumerate(normalized_trajectories):
+        #     t.to_csv(f"data/preprocessed_data/{i}.csv", index=False)
+        #     # break
+            
+        self.save_model_dataset(normalized_trajectories)
+            
+    def save_model_dataset(self, trajectories):
+        
+        def prepare_trajectory(t: pd.DataFrame):
+            X = t[self.feature_cols + [self.cols.to_predict]].values.astype(float)
+            return t[self.cols.Sampled_Date].min(), X
+        
+        data = [prepare_trajectory(t) for t in trajectories]
+        
+        data.sort(key=lambda x: x[0])
+        
+        total_size = len(data)
+        validation_size = int(total_size * self.validation_size_ratio)
+        test_size = int(total_size * self.validation_size_ratio)
+        train_size = total_size - validation_size - test_size
+        
+        train_data = data[:train_size]
+        validation_data = data[train_size:train_size + validation_size]
+        test_data = data[train_size + validation_size:]
+                    
+        def create_3d_arrays(data_list):
+            # Assume all DataFrames have same number of timesteps
+            n_rows = data_list[0][1].shape[0]
+            n_cols = data_list[0][1].shape[1]
+            n_samples = len(data_list)
+            
+            X_3d = np.zeros((n_samples, n_rows, n_cols))
+            
+            for i, (_, X) in enumerate(data_list):
+                X_3d[i] = X
+                
+            return X_3d
+        
+        X_train = create_3d_arrays(train_data)
+        X_validation = create_3d_arrays(validation_data)
+        X_test = create_3d_arrays(test_data)
+        
+        def save_pickle(data, filename):
+            with open(filename, 'wb') as f:
+                pickle.dump(data, f)
+
+        save_pickle(X_train, 'data/datasets/X_train.pkl')
+        save_pickle(X_validation, 'data/datasets/X_validation.pkl')
+        save_pickle(X_test, 'data/datasets/X_test.pkl')
+        
+        print("Train dates:", [x[0] for x in train_data])
+        print("Validation dates:", [x[0] for x in validation_data])
+        print("Test dates:", [x[0] for x in test_data])
+        print("\nShapes:")
+        print("X_train:", X_train.shape)
+        print("X_val:", X_validation.shape)
+        print("X_test:", X_test.shape)
     
     def read_all_boats_trajectories(self):
         all_boats_trajectories = {}
@@ -149,30 +225,77 @@ class AISPreprocessor:
                 self.max_lon = cur_lon_max
             if cur_lon_min < self.min_lon:
                 self.min_lon = cur_lon_min
-        info = f"""self.min_lat: {self.min_lat}
+        info = f"""
+self.min_lat: {self.min_lat}
 self.max_lat: {self.max_lat}
 self.min_lon: {self.min_lon}
 self.max_lon: {self.max_lon}"""
         print(info)
-
+        
+    def get_local_latlon_scales(self, trajectories: List[pd.DataFrame]):
+        if len(trajectories) == 0:
+            raise Exception("There are no trajectories in the input")
+        
+        self.local_lat_scale, self.local_lon_scale, self.local_pseudo_lon_scale = 0, 0, 0
+        for trajectory in trajectories:
+            cur_lat_min = trajectory[self.cols.Latitude].min()
+            cur_lon_min = trajectory[self.cols.Longitude].min()
+            cur_pseudo_lon_min = trajectory[self.cols.Pseudo_Longitude].min()
+            cur_lat_max = trajectory[self.cols.Latitude].max()
+            cur_lon_max = trajectory[self.cols.Longitude].max()
+            cur_pseudo_lon_max = trajectory[self.cols.Pseudo_Longitude].max()
+            
+            cur_local_lat_scale = cur_lat_max - cur_lat_min
+            cur_local_lon_scale = cur_lon_max - cur_lon_min
+            cur_local_pseudo_lon_scale = cur_pseudo_lon_max - cur_pseudo_lon_min
+            
+            if cur_local_lat_scale > self.local_lat_scale:
+                self.local_lat_scale = cur_local_lat_scale
+            
+            if cur_local_lon_scale > self.local_lon_scale:
+                self.local_lon_scale = cur_local_lon_scale
+                
+            if cur_local_pseudo_lon_scale > self.local_pseudo_lon_scale:
+                self.local_pseudo_lon_scale = cur_local_pseudo_lon_scale
+                
+        info = f"""
+self.local_lat_scale: {self.local_lat_scale}
+self.local_lon_scale: {self.local_lon_scale}
+self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
+"""
+        print(info)
+        
     def get_preprocessed_all_boats_trajectories(self, trajectories: List[pd.DataFrame]): 
+        if len(trajectories) == 0:
+            raise Exception("There are no trajectories in the input")
+        pre_good_trajectories: List[pd.DataFrame] = []
         good_trajectories: List[pd.DataFrame] = []
         for trajectory in trajectories:
             sampled_trajectory = self.get_sampled_trajectory(trajectory)
             trajectory_sequences = self.get_trajectory_sequences(sampled_trajectory)
             # filter short trajectories
-            current_good_trajectories = [seq for seq in trajectory_sequences if len(seq) >= self.min_trajectory_sequence_len]
-            good_trajectories.extend(current_good_trajectories)
-            if len(good_trajectories) > 2:
+            # TODO: uncomment current_good_trajectories = [seq for seq in trajectory_sequences if len(seq) >= self.trajectory_sequence_len]
+            current_good_trajectories = [seq for seq in trajectory_sequences if len(seq) >= 2*self.trajectory_sequence_len]
+            pre_good_trajectories.extend(current_good_trajectories)
+            if len(pre_good_trajectories) > 0:
                 break
-            
-        for t in good_trajectories:
+        
+        for t in pre_good_trajectories:
             t[self.cols.is_synthetic] = False
+            
+            n_complete_chunks = len(t) // self.trajectory_sequence_len
+            current_good_trajectories = [t[i*self.trajectory_sequence_len:(i+1)*self.trajectory_sequence_len] for i in range(n_complete_chunks)]
+            good_trajectories.extend(current_good_trajectories)
+            
         return good_trajectories
 
     def normalize_trajectory(self, trajectory: pd.DataFrame):
-        trajectory[self.cols.n_Latitude] = (trajectory[self.cols.Latitude] - self.min_lat) / self.latlon_scale
-        trajectory[self.cols.n_Longitude] = (trajectory[self.cols.Pseudo_Longitude] - self.min_lon) / self.latlon_scale
+        
+        cur_lat_min = trajectory[self.cols.Latitude].min()
+        cur_pseudo_lon_min = trajectory[self.cols.Pseudo_Longitude].min()
+            
+        trajectory[self.cols.n_Latitude] = (trajectory[self.cols.Latitude] - cur_lat_min) / self.local_lat_scale
+        trajectory[self.cols.n_Longitude] = (trajectory[self.cols.Pseudo_Longitude] - cur_pseudo_lon_min) / self.local_pseudo_lon_scale
         trajectory[self.cols.n_SOG] = ((trajectory[self.cols.SOG] / SPEED_MAX < 1) * trajectory[self.cols.SOG] / SPEED_MAX) + (trajectory[self.cols.SOG] / SPEED_MAX > 1) 
         trajectory[self.cols.n_COG] = trajectory[self.cols.COG] / MAX_DEGREES
         trajectory[self.cols.n_Heading] = ((trajectory[self.cols.Heading] / MAX_DEGREES < 1) * trajectory[self.cols.Heading] / MAX_DEGREES) + 511 * (trajectory[self.cols.Heading] / MAX_DEGREES > 1) 
@@ -187,9 +310,24 @@ self.max_lon: {self.max_lon}"""
         self.get_max_pseudo_lon(trajectories)
         self.validate_latlon_scale()
         
+        self.get_local_latlon_scales(trajectories)
+        
         normalized_trajectories = [self.normalize_trajectory(trajectory) for trajectory in trajectories]
         return normalized_trajectories
     
+    def create_prediction_masks(self, trajectories: List[pd.DataFrame]) -> List[pd.DataFrame]:
+        
+        for trajectory in trajectories:
+            n_predict = np.random.randint(self.min_trajectory_sequence_len_to_predict, self.max_trajectory_sequence_len_to_predict + 1)
+            start_range = range(self.prediction_buffer, self.trajectory_sequence_len - n_predict - self.prediction_buffer + 1)
+            start_idx = np.random.choice(start_range)
+            
+            mask = np.zeros(self.trajectory_sequence_len, dtype=bool)  # All False by default
+            mask[start_idx:start_idx + n_predict] = True
+            trajectory[self.cols.to_predict] = mask
+        
+        return trajectories
+
     def synthesize_trajectory(self, trajectory: pd.DataFrame) -> pd.DataFrame:
         synthetic_trajectory = trajectory.copy()
         
@@ -428,6 +566,12 @@ self.max_lon: {self.max_lon}"""
 
         # fig.write_html(f"{base_path}{i}.html")
         fig.write_image(f"{base_path}{i}.png")
+        
+        if self.cols.n_Latitude in trajectory.columns:
+            fig = px.line(trajectory, x=self.cols.n_Longitude, y=self.cols.n_Latitude, title='Trajectory')
+            fig.update_xaxes(range=[0, 1])
+            fig.update_yaxes(range=[0, 1])
+            fig.write_image(f"{base_path}{i}_norm.png")
         
     
 aisp = AISPreprocessor(dataset_path = 'data/fishing_boats_dynamic/Dynamic_*.csv')
