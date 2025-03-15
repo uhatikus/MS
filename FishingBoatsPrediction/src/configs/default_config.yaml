@@ -1,7 +1,16 @@
-retrain: True
-tb_log: False
+dataset_dir: data/datasets
 device: cpu # gpu or cpu
+
+lat_size: 250
+lon_size: 270
+sog_size: 30
+cog_size: 72
+
 max_epochs: 50
 batch_size: 32
-n_samples: 16
 learning_rate: 0.0006
+
+retrain: True
+n_samples: 16
+
+

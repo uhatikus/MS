@@ -2,8 +2,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+from src.configs.configs import DefaultConfig
+
 class AISUNet(nn.Module):
-    def __init__(self, in_channels=3, out_channels=3, base_channels=32):
+    def __init__(self, config: DefaultConfig, in_channels=3, out_channels=3, base_channels=32):
         super().__init__()
         self.time_embed = nn.Linear(1, base_channels)
         
@@ -53,3 +55,23 @@ class AISUNet(nn.Module):
         x = self.up2(x) + t_emb
         
         return self.conv_last(x)
+    
+class SimpleNoiseScheduler:
+    def __init__(self, num_timesteps=1000, beta_start=1e-4, beta_end=2e-2):
+        self.num_timesteps = num_timesteps
+        self.betas = torch.linspace(beta_start, beta_end, num_timesteps)
+        self.alphas = 1. - self.betas
+        self.alpha_bars = torch.cumprod(self.alphas, dim=0)
+
+    def add_noise(self, original, noise, timesteps):
+        sqrt_alpha_bar = torch.sqrt(self.alpha_bars[timesteps])
+        sqrt_one_minus_alpha_bar = torch.sqrt(1. - self.alpha_bars[timesteps])
+        
+        # Reshape for broadcasting
+        sqrt_alpha_bar = sqrt_alpha_bar.view(-1, 1, 1, 1)
+        sqrt_one_minus_alpha_bar = sqrt_one_minus_alpha_bar.view(-1, 1, 1, 1)
+        
+        return sqrt_alpha_bar * original + sqrt_one_minus_alpha_bar * noise
+
+    def sample_timesteps(self, batch_size, device):
+        return torch.randint(0, self.num_timesteps, (batch_size,), device=device)
