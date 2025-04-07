@@ -15,6 +15,7 @@ class FishingAISDataset(Dataset):
                               The last column is the mask.
             onehot_sizes (List[int]): list of sizes for 1-hot encodig of lat,lon,SOG,COG respectively
         """
+        super().__init__()
         self.data: np.ndarray = data
         
         self.num_samples, self.seq_len, self.num_features = data.shape
@@ -27,22 +28,35 @@ class FishingAISDataset(Dataset):
 
     def __getitem__(self, idx):
         # Separate features and mask
-        features = self.data[idx, :, :-1]  # Shape: (seq_len, 4)
-        mask = self.data[idx, :, -1]       # Shape: (seq_len,)
+        features: np.ndarray = self.data[idx, :, :-1]  # Shape: (seq_len, 4)
+        mask: np.ndarray = self.data[idx, :, -1]       # Shape: (seq_len, )
+
+        # print(f"features size: {features.shape}")
+        # print(f"mask size: {mask.shape}")
+        # features size: (16, 4)
+        # mask size: (16,)
 
         # One-hot encode each feature
         one_hot_features = []
-        for i, onehot_size in enumerate(self.onehot_sizes):  # Loop over the features
-            feature = features[:, i]  # Shape: (seq_len,)
+        for i, (feature, size) in enumerate(zip(features.T, self.onehot_sizes)):# Loop over the features
+            feature = torch.from_numpy(feature).float() # Shape: (seq_len,)
             # Discretize using equal-width binning
-            idxs = (feature * onehot_size).long().clamp(max=onehot_size - 1)
+            idxs = (feature * (size - 1)).long()
             # One-hot encode the indices
-            one_hot = F.one_hot(idxs, num_classes=onehot_size).float()  # Shape: (seq_len, num_bins)
+            one_hot: torch.Tensor = F.one_hot(idxs, num_classes=size).float()  # Shape: (seq_len, num_bins)
             one_hot_features.append(one_hot)
+            # if i == 0:
+            #     print(f"one_hot size: {one_hot.size()}")
+                # one_hot size: torch.Size([16, 250])
+
             
-        # Concatenate processed features along the last dimension
-        one_hot_features = torch.cat(one_hot_features, dim=-1)  # Shape: (seq_len, sum(att_sizes))
-        # Convert mask to tensor
-        mask = torch.tensor(mask, dtype=torch.float32)
+        # concatanate all features
+        one_hot_features = torch.cat(one_hot_features, dim=-1)
         
-        return one_hot_features,  mask
+        # print(f"one_hot_features size: {one_hot_features.size()}")
+        # one_hot_features size: torch.Size([16, 622])
+        
+        # Convert mask to tensor
+        mask = torch.from_numpy(mask).float()
+        
+        return one_hot_features, mask

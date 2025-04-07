@@ -1,16 +1,38 @@
-dataset_dir: data/datasets
 device: cpu # gpu or cpu
 
+# FishingAISDataset
+dataset_dir: data/datasets
 lat_size: 250
 lon_size: 270
-sog_size: 30
+sog_size: 32
 cog_size: 72
+# sum shouuld be devided by 2^3 = 8
 
-max_epochs: 50
-batch_size: 32
+# AISUNet
+base_channels: 32
+time_dim: 128
+
+# AISNoiseScheduler
+num_timesteps: 1000 # 1000
+beta_start: 0.0001
+beta_end: 0.02
+schedule: linear
+
+# AIStableDiffusionTrainer
 learning_rate: 0.0006
+weight_decay: 0.1
+num_epochs: 1
+eta_min: 0.000001
+batch_size: 2 # 32
+use_snr_weighting: True
+log_interval: 50
+output_dir: results/test_1
+noise_magnitude: 0.33
 
+# not used yet
 retrain: True
-n_samples: 16
+
+
+
 
 

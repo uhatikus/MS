@@ -1,1 +1,1 @@
-from AIStableDiffusion import AISUNet
+from .AIStableDiffusion import AISUNet
