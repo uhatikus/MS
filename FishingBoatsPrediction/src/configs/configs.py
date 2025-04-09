@@ -1,5 +1,6 @@
 import torch
 import yaml
+from datetime import datetime
 
 class DefaultConfig:
     def __init__(self, config_path = "src/configs/default_config.yaml"):
@@ -13,8 +14,23 @@ class DefaultConfig:
             
         self.device =  self.devices[data["device"]]
         
+        # AISPreprocessor
+        self.target_freq_in_minutes: int = data["target_freq_in_minutes"]
+        self.trajectory_sequence_len: int = data["trajectory_sequence_len"]
+        self.max_trajectory_sequence_len_to_predict: int = data["max_trajectory_sequence_len_to_predict"]
+        self.min_trajectory_sequence_len_to_predict: int = data["min_trajectory_sequence_len_to_predict"]
+        self.rotate_trajetories: bool = data["rotate_trajetories"]
+        # self.shitf_trajectories: bool = data["shitf_trajectories"]
+        # self.cols: AISColumnNames = AISColumnNames(),
+        self.synthetic_ratio: float = data["synthetic_ratio"]
+        self.prediction_buffer: int = data["prediction_buffer"]
+        
+        self.validation_size_ratio: float = data["validation_size_ratio"] # from 0 to 1
+        self.test_size_ratio: float = data["test_size_ratio"] # from 0 to 1
+
+        self.dataset_dir = f"data/datasets/dataset_{self.target_freq_in_minutes}_{self.trajectory_sequence_len}_{self.max_trajectory_sequence_len_to_predict}_{self.min_trajectory_sequence_len_to_predict}_{self.rotate_trajetories}_{self.synthetic_ratio}_{self.prediction_buffer}_{self.validation_size_ratio}_{self.test_size_ratio}"
+        
         # FishingAISDataset
-        self.dataset_dir = data["dataset_dir"]
         self.lat_size = data["lat_size"]
         self.lon_size = data["lon_size"]
         self.sog_size = data["sog_size"]
@@ -40,9 +56,22 @@ class DefaultConfig:
         self.batch_size = data["batch_size"]
         self.use_snr_weighting = data["use_snr_weighting"]
         self.log_interval = data["log_interval"]
-        self.output_dir = data["output_dir"]
         self.noise_magnitude = data["noise_magnitude"]
-
         
-dc = DefaultConfig()
-print(dc.device)
+        now = datetime.now()
+        timestamp = now.strftime("%Y%m%d_%H%M%S")
+        self.output_dir = f"{data["output_dir"]}/{timestamp}"
+
+class TestConfig(DefaultConfig):
+    def __init__(self, config_path="src/configs/test_config.yaml"):
+        super().__init__(config_path)
+        
+
+class ProdConfig(DefaultConfig):
+    def __init__(self, config_path="src/configs/prod_config.yaml"):
+        super().__init__(config_path)
+        
+        
+if __name__ == "__main__":     
+    dc = DefaultConfig()
+    print(dc.device)

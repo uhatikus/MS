@@ -13,11 +13,13 @@ from plotly.subplots import make_subplots
 
 import numpy as np
 
+from clearml import Task, Logger
+
 from configs.configs import DefaultConfig
 from models.AIStableDiffusion import AISNoiseScheduler, AISUNet
 
 class AIStableDiffusionTrainer:
-    def __init__(self, config: DefaultConfig, model: AISUNet, scheduler: AISNoiseScheduler, dataloaders: Dict[str, DataLoader]):
+    def __init__(self, config: DefaultConfig, model: AISUNet, scheduler: AISNoiseScheduler, dataloaders: Dict[str, DataLoader], clearml_task: Task | None = None):
         self.config: DefaultConfig = config
         self.model: AISUNet = model
         self.scheduler: AISNoiseScheduler = scheduler
@@ -34,6 +36,11 @@ class AIStableDiffusionTrainer:
             T_max=config.num_epochs,
             eta_min=1e-6
         )
+        
+        self.clearml_task: Task | None = clearml_task
+        self.logger: Logger | None = None
+        if self.clearml_task is not None:
+            self.logger: Logger = self.clearml_task.get_logger()
         
         # Create output directory
         os.makedirs(self.config.output_dir, exist_ok=True)
@@ -57,10 +64,10 @@ class AIStableDiffusionTrainer:
             if validation_loss < best_validation_loss:
                 best_validation_loss = validation_loss
                 self._save_checkpoint(epoch, validation_loss, f'best_model_{epoch}.pth')
-            
-            # Plot losses
-            self._plot_losses(train_losses, validation_losses)
-    
+                        
+        # Plot losses
+        self._plot_losses(train_losses, validation_losses)
+                
     def _train_epoch(self, epoch):
         """Single training epoch"""
         self.model.train()
@@ -81,16 +88,6 @@ class AIStableDiffusionTrainer:
             # Add noise to features
             
             noised_features = self.scheduler.add_noise(one_hot_features, masks, noise, timesteps)
-            
-            # print(f"timesteps size: {timesteps.size()}") # = batch_size or smaller if less samples for batch
-            # print(f"noise size: {noise.size()}")
-            # print(f"noised_features size: {noised_features.size()}")
-            
-            # timesteps size: torch.Size([2])
-            # noise size: torch.Size([2, 16, 622])
-            # noised_features size: torch.Size([2, 16, 622])
-            
-            # self.compare_heatmaps_plotly(one_hot_features, noised_features, masks, sample_idx=0)
             
             # Predict noise
             self.optimizer.zero_grad()
@@ -115,6 +112,22 @@ class AIStableDiffusionTrainer:
         
         self.lr_scheduler.step()
         train_loss = total_loss / len(self.dataloaders["train"])
+        
+        if self.clearml_task is not None:
+            logger = self.clearml_task.get_logger()
+            logger.report_scalar(
+                title="Training Loss", 
+                series="Batch Loss", 
+                value=loss.item(), 
+                iteration=batch_idx + epoch * len(self.dataloaders["train"])
+            )
+            # Log LR (since you're using a scheduler)
+            logger.report_scalar(
+                title="Learning Rate", 
+                series="LR", 
+                value=self.optimizer.param_groups[0]['lr'], 
+                iteration=epoch
+            )
         
         return train_loss
     
@@ -182,7 +195,6 @@ class AIStableDiffusionTrainer:
         fig.write_html(os.path.join(self.config.output_dir, 'loss_curve.html'))
         fig.write_image(os.path.join(self.config.output_dir, 'loss_curve.png'))
     
-    
     @torch.no_grad()
     def generate_test_samples(self):
         """Generate samples from test dataloader
@@ -235,7 +247,7 @@ class AIStableDiffusionTrainer:
                 
         return all_samples    
     
-    def compare_heatmaps_plotly(self, original, noised, mask, sample_idx: int = 0, filename: str = "noizing_sample"):
+    def compare_heatmaps_plotly(self, original, noised, mask, sample_idx: int = 0, filename: str = "noizing_sample", add_red: bool = False):
         """
         Args:
             original (torch.Tensor): [2, 16, 622] (one_hot_features)
@@ -246,7 +258,7 @@ class AIStableDiffusionTrainer:
         # Convert to numpy and take argmax (if one-hot) or direct values
         original_np = original[sample_idx].cpu().numpy()  # [16, 622]
         noised_np: np.ndarray = noised[sample_idx].cpu().numpy()      # [16, 622]
-        # mask_np = mask[sample_idx].cpu().numpy()          # [16]
+        mask_np = mask[sample_idx].cpu().numpy()          # [16]
 
         noised_np = noised_np.__abs__()
         # Create subplots
@@ -284,15 +296,16 @@ class AIStableDiffusionTrainer:
         )
 
         # Overlay red rectangles where mask=1
-        # for pos in np.where(mask_np == 1)[0]:
-        #     fig.add_shape(
-        #         type="rect",
-        #         x0=-0.5, x1=621.5,  # Cover full width (622 columns)
-        #         y0=pos-0.5, y1=pos+0.5,
-        #         line=dict(color="red", width=2),
-        #         fillcolor="rgba(255,0,0,0.2)",
-        #         row=1, col=2
-        #     )
+        if add_red:
+            for pos in np.where(mask_np == 1)[0]:
+                fig.add_shape(
+                    type="rect",
+                    x0=-0.5, x1=621.5,  # Cover full width (622 columns)
+                    y0=pos-0.5, y1=pos+0.5,
+                    line=dict(color="red", width=2),
+                    fillcolor="rgba(255,0,0,0.2)",
+                    row=1, col=2
+                )
 
         # Update layout
         fig.update_layout(
@@ -305,5 +318,9 @@ class AIStableDiffusionTrainer:
 
         fig.write_html(os.path.join(self.config.output_dir, f'{filename}.html'))
         fig.write_image(os.path.join(self.config.output_dir, f'{filename}.png'))
-        # fig.show()
+        self.logger.report_plotly(
+            title="Heatmap Comparison", 
+            series=f"Sample_{sample_idx}", 
+            figure=fig
+        )
     

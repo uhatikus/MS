@@ -62,6 +62,13 @@ class AISUNet(nn.Module):
         self.out_conv = nn.Conv2d(config.base_channels, 1, kernel_size=1)
 
         self.pool = nn.MaxPool2d(2)
+        
+        # # To split the output into parts and apply softmax to each part
+        # self.lat_start = 0
+        # self.lat_end = config.lat_size
+        # self.lon_end = self.lat_end + config.lon_size
+        # self.sog_end = self.lon_end + config.sog_size
+        # self.cog_end = self.sog_end + config.cog_size
 
     def _block(self, in_ch, out_ch):
         return nn.Sequential(
@@ -79,8 +86,8 @@ class AISUNet(nn.Module):
 
     def forward(self, x: torch.Tensor, t: torch.Tensor):
         # x: [B, seq_len, one_hot_featuures_len]
-        # Reshape to [B, 1, seq_len, one_hot_featuures_len] to treat as a single-channel image
-        x = x.unsqueeze(1)  # [B, 1, seq_len, one_hot_featuures_len]
+        # Reshape to [B, 1, seq_len, one_hot_features_len] to treat as a single-channel image
+        x = x.unsqueeze(1)  # [B, 1, seq_len, one_hot_features_len]
         
         t_emb = self.time_embed(t)
 
@@ -115,6 +122,21 @@ class AISUNet(nn.Module):
         
         # Remove channel dimension to return [B, seq_len, one_hot_feature_len]
         output = output.squeeze(1)
+        
+        # # Split the tensor
+        # lat_part = output[:, :, self.lat_start:self.lat_end]
+        # lon_part = output[:, :, self.lat_end:self.lon_end]
+        # sog_part = output[:, :, self.lon_end:self.sog_end]
+        # cog_part = output[:, :, self.sog_end:self.cog_end]
+        
+        # # Apply softmax to each part along the feature dimension
+        # lat_part = F.softmax(lat_part, dim=-1)
+        # lon_part = F.softmax(lon_part, dim=-1)
+        # sog_part = F.softmax(sog_part, dim=-1)
+        # cog_part = F.softmax(cog_part, dim=-1)
+        
+        # # Concatenate the parts back together
+        # output = torch.cat([lat_part, lon_part, sog_part, cog_part], dim=-1)
         
         return output
     
