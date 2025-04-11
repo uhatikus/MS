@@ -3,7 +3,7 @@ import yaml
 from datetime import datetime
 
 class DefaultConfig:
-    def __init__(self, config_path = "src/configs/default_config.yaml"):
+    def __init__(self, config_path = "fishingboatsprediction/configs/default_config.yaml"):
         self.devices = {
             "cpu": torch.device("cpu"),
             "gpu": torch.device("cuda:0")
@@ -63,12 +63,12 @@ class DefaultConfig:
         self.output_dir = f"{data["output_dir"]}/{timestamp}"
 
 class TestConfig(DefaultConfig):
-    def __init__(self, config_path="src/configs/test_config.yaml"):
+    def __init__(self, config_path="fishingboatsprediction/configs/test_config.yaml"):
         super().__init__(config_path)
         
 
 class ProdConfig(DefaultConfig):
-    def __init__(self, config_path="src/configs/prod_config.yaml"):
+    def __init__(self, config_path="fishingboatsprediction/configs/prod_config.yaml"):
         super().__init__(config_path)
         
         

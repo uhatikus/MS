@@ -63,7 +63,7 @@ def run_experiment_with_clearml():
     # ===============================
     if not os.path.exists(config.dataset_dir):
         print("Creating new dataset..")
-        aisp = AISPreprocessor(dataset_path = 'data/fishing_boats_dynamic/Dynamic_*.csv',
+        aisp = AISPreprocessor(dataset_path = 'data/FishingKoreaAIS/Dynamic_*.csv',
                                 target_freq_in_minutes = config.target_freq_in_minutes,
                                 trajectory_sequence_len = config.trajectory_sequence_len,
                                 max_trajectory_sequence_len_to_predict = config.max_trajectory_sequence_len_to_predict,
