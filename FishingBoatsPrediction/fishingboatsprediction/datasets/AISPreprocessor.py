@@ -1,15 +1,30 @@
 from dataclasses import dataclass
-import pandas as pd
 import glob
 from typing import List, Dict
 import plotly.express as px
 import pickle
 import os
 
-import numpy as np
-from pyproj import CRS, Transformer
-from utils import set_seed
 
+from pyproj import CRS, Transformer
+from fishingboatsprediction.utils import set_seed
+
+from fishingboatsprediction.configs.configs import DefaultConfig, TestConfig
+
+# Import GPU-accelerated libraries
+try:
+    import cupy as np
+    import cudf as pd
+    from cudf import DataFrame
+    GPU_AVAILABLE = True
+    print("GPU AVAILABLE")
+except ImportError:
+    import numpy as np
+    import pandas as pd
+    from pandas import DataFrame
+    GPU_AVAILABLE = False
+    print("GPU NOT AVAILABLE")
+    
 set_seed(42)
 
 # Define the Coordinate Reference Systems
@@ -19,7 +34,7 @@ crs_ecef = CRS.from_epsg(4978)      # ECEF
 transformer_to_ecef = Transformer.from_crs(crs_geodetic, crs_ecef, always_xy=True)
 transformer_to_geodetic = Transformer.from_crs(crs_ecef, crs_geodetic, always_xy=True)
 
-SPEED_MAX = 30  # knot
+SPEED_MAX = 30 # knot
 MAX_DEGREES = 360
 @dataclass
 class AISColumnNames:
@@ -293,11 +308,10 @@ self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
             sampled_trajectory = self.get_sampled_trajectory(trajectory)
             trajectory_sequences = self.get_trajectory_sequences(sampled_trajectory)
             # filter short trajectories
-            # TODO: uncomment current_good_trajectories = [seq for seq in trajectory_sequences if len(seq) >= self.trajectory_sequence_len]
-            current_good_trajectories = [seq for seq in trajectory_sequences if len(seq) >= 2*self.trajectory_sequence_len]
+            current_good_trajectories = [seq for seq in trajectory_sequences if len(seq) >= self.trajectory_sequence_len]
             pre_good_trajectories.extend(current_good_trajectories)
-            if len(pre_good_trajectories) > 0:
-                break
+            # if len(pre_good_trajectories) > 0:
+            #     break
         
         for t in pre_good_trajectories:
             t[self.cols.is_synthetic] = False
@@ -598,5 +612,21 @@ self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
             fig.write_image(f"{base_path}{i}_norm.png")
 
 if __name__ == "__main__":
-    aisp = AISPreprocessor(dataset_path = 'data/fishing_boats_dynamic/Dynamic_*.csv')
+    config: DefaultConfig = TestConfig()
+    print("Config is ready.")
+
+    print("Creating new dataset..")
+    aisp = AISPreprocessor(dataset_path = 'data/testAIS/Dynamic_*.csv',
+                        #    dataset_path = 'data/FishingKoreaAIS/Dynamic_*.csv',
+                            target_freq_in_minutes = config.target_freq_in_minutes,
+                            trajectory_sequence_len = config.trajectory_sequence_len,
+                            max_trajectory_sequence_len_to_predict = config.max_trajectory_sequence_len_to_predict,
+                            min_trajectory_sequence_len_to_predict = config.min_trajectory_sequence_len_to_predict,
+                            rotate_trajetories = config.rotate_trajetories,
+                            synthetic_ratio = config.synthetic_ratio,
+                            prediction_buffer = config.prediction_buffer, 
+                            validation_size_ratio = config.validation_size_ratio, # from 0 to 1
+                            test_size_ratio = config.test_size_ratio, # from 0 to 1
+                            output_dir = config.output_dir,
+                            dataset_dir = config.dataset_dir)
     aisp.run()

@@ -107,8 +107,8 @@ class AIStableDiffusionTrainer:
             total_loss += loss.item()
             
             if batch_idx % self.config.log_interval == 0:
-                print(f"Train Epoch: {epoch} [{batch_idx}/{len(self.dataloaders["train"])} "
-                      f"Loss: {loss.item():.4f}")
+                print(f"Train Epoch: {epoch} [{batch_idx}/{len(self.dataloaders["train"])}] "
+                      f"Loss: {loss.item():.7f}")
         
         self.lr_scheduler.step()
         train_loss = total_loss / len(self.dataloaders["train"])
@@ -238,6 +238,7 @@ class AIStableDiffusionTrainer:
                 self.compare_heatmaps_plotly(one_hot_features, noised_features, masks, sample_idx=0, filename = "test_sample")
             
             all_samples.append(noised_features.cpu())
+            break
             
         
         all_samples = np.concatenate(all_samples, axis=0)
