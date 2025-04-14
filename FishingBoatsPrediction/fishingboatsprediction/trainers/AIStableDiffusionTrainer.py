@@ -255,8 +255,9 @@ class AIStableDiffusionTrainer:
             noised_features_cpu = noised_features.cpu()
             raw_samples.append(noised_features_cpu)
             
-            reconstructed = FishingAISDataset.one_hot_to_continuous(noised_features_cpu, masks, self.config.onehot_sizes)
-            reconstructed_samples.append(reconstructed)
+            reconstructed = FishingAISDataset.one_hot_to_continuous(noised_features, masks, self.config.onehot_sizes)
+            reconstructed_cpu = reconstructed.cpu()
+            reconstructed_samples.append(reconstructed_cpu)
                 
             if i == 0:
                 self.compare_heatmaps_plotly(one_hot_features, noised_features, masks, sample_idx=i, filename = "test_sample")
