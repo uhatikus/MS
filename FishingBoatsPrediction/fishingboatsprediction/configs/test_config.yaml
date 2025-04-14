@@ -1,8 +1,8 @@
-device: gpu # gpu or cpu
+device: cpu # gpu or cpu
 
 # AISPreprocessor
 target_freq_in_minutes: 10
-trajectory_sequence_len: 16 #96
+trajectory_sequence_len: 36 #96
 max_trajectory_sequence_len_to_predict: 8
 min_trajectory_sequence_len_to_predict: 4
 rotate_trajetories: True

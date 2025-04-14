@@ -119,9 +119,13 @@ class AISPreprocessor:
         
         normalized_trajectories: List[pd.DataFrame] = self.create_prediction_masks(normalized_trajectories)
 
-        for i, t in enumerate(good_trajectories):
-            self.display_trajectory(t, i, base_path=f"{self.output_dir}/sample_ship_trajectory_preprocessed_")
-            break
+        normalized_trajectories: List[pd.DataFrame] = self.filter_long_trajectories(normalized_trajectories)
+        
+        # for i, t in enumerate(good_trajectories):
+        #     self.display_trajectory(t, i, base_path=f"{self.output_dir}/sample_ship_trajectory_preprocessed_")
+        #     break
+        
+        
         
         # for i, t in enumerate(normalized_trajectories):
         #     t.to_csv(f"data/preprocessed_data/{i}.csv", index=False)
@@ -368,6 +372,41 @@ self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
         
         return trajectories
 
+    def filter_long_trajectories(self, trajectories: List[pd.DataFrame]) -> List[pd.DataFrame]:
+        distances_to_bounding_box = [t[self.cols.n_Latitude].min() for t in trajectories] + [t[self.cols.n_Longitude].min() for t in trajectories] + [1 - t[self.cols.n_Latitude].max() for t in trajectories] + [1 - t[self.cols.n_Longitude].max() for t in trajectories]
+        mean = np.mean(distances_to_bounding_box)
+        std = np.std(distances_to_bounding_box)
+        
+        print(f"mean: {mean}")
+        print(f"std: {std}")
+        coef = 1
+        
+        lower_bound = max(0, mean - coef * std)
+        upper_bound = min(1, 1 - mean + coef * std)
+        print(f"lower_bound: {lower_bound}")
+        print(f"upper_bound: {upper_bound}")
+        print(f"(upper_bound - lower_bound): {(upper_bound - lower_bound)}")
+        
+        def condition(t):
+            lat_min_cond = t[self.cols.n_Latitude].min() >= lower_bound
+            lon_min_cond = t[self.cols.n_Longitude].min() >= lower_bound
+            lat_max_cond = t[self.cols.n_Latitude].max() <= upper_bound
+            lon_max_cond = t[self.cols.n_Longitude].max() <= upper_bound
+            return lat_min_cond and lon_min_cond and lat_max_cond and lon_max_cond
+        
+        # Apply filter
+        print(f"before filter len(trajectories): {len(trajectories)}")
+        filtered = [t for t in trajectories if condition(t)]
+        print(f"after filter len(filtered): {len(filtered)}")
+        
+        filtered_and_scaled = []
+        for t in filtered:
+            t[self.cols.n_Latitude] = (t[self.cols.n_Latitude] - 0.5) / (upper_bound - lower_bound) + 0.5
+            t[self.cols.n_Longitude] = (t[self.cols.n_Longitude] - 0.5) / (upper_bound - lower_bound) + 0.5
+            filtered_and_scaled.append(t)
+            
+        return filtered_and_scaled
+    
     def synthesize_trajectory(self, trajectory: pd.DataFrame) -> pd.DataFrame:
         synthetic_trajectory = trajectory.copy()
         
