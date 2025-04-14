@@ -170,7 +170,7 @@ class AIStableDiffusionTrainer:
             total_loss += loss.item()
         
         validation_loss = total_loss / len(self.dataloaders["validation"])
-        print(f"Validation Epoch: {epoch} Loss: {validation_loss:.4f}")
+        print(f"Validation Epoch: {epoch} Loss: {validation_loss:.7f}")
         return validation_loss
     
     def _save_checkpoint(self, epoch, loss, filename):
