@@ -158,12 +158,12 @@ class AISNoiseScheduler:
             alphas_cumprod = torch.cos(((x / config.num_timesteps) + s) / (1 + s) * torch.pi * 0.5) ** 2
             alphas_cumprod = alphas_cumprod / alphas_cumprod[0]
             betas = 1 - (alphas_cumprod[1:] / alphas_cumprod[:-1])
-            self.betas = torch.clip(betas, 0, 0.999)
+            self.betas = torch.clip(betas, 0, 0.999).to(config.device)
         else:
             raise ValueError(f"Unknown schedule: {config.schedule}")
             
         self.alphas = 1. - self.betas
-        self.alpha_bars = torch.cumprod(self.alphas, dim=0)
+        self.alpha_bars = torch.cumprod(self.alphas, dim=0).to(config.device)
 
     def add_noise(self, 
                 one_hot_features: torch.Tensor, 
