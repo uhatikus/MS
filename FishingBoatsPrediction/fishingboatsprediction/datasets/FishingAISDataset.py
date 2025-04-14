@@ -48,3 +48,44 @@ class FishingAISDataset(Dataset):
         mask = torch.from_numpy(mask).float()
         
         return one_hot_features, mask
+    
+    @staticmethod
+    def one_hot_to_continuous(one_hot_features: torch.Tensor, 
+                              masks: torch.Tensor,
+                              onehot_sizes: List[int]
+                              ) -> np.ndarray:
+        """
+        Convert one-hot encoded features back to continuous values.
+        
+        Args:
+            one_hot_features (torch.Tensor): One-hot encoded features of shape (samples_len, seq_len, sum(onehot_sizes))
+            masks (torch.Tensor): masks of shape (samples_len, seq_len)
+            onehot_sizes (List[int]): List of sizes for 1-hot encoding of each feature (lat, lon, SOG, COG)
+            
+        Returns:
+            np.ndarray: Continuous features array of shape (seq_len, len(onehot_sizes))
+        """
+        # Split the concatenated one-hot features into individual features
+        split_features = torch.split(one_hot_features, onehot_sizes, dim=-1)
+        
+        # Convert each one-hot feature back to continuous value
+        continuous_features = []
+        for i, (feature, size) in enumerate(zip(split_features, onehot_sizes)):
+            # Get the indices of the maximum values (argmax)
+            indices = torch.argmax(feature, dim=-1).float()  # Shape: (samples_len, seq_len)
+            
+            # Convert indices back to continuous values in [0, 1] range
+            continuous = indices / (size - 1)
+            
+            continuous_features.append(continuous.unsqueeze(-1))  # Add feature dimension
+        
+        # Concatenate all features along the feature dimension
+        continuous_features = torch.cat(continuous_features, dim=-1)  # Shape: (samples_len, seq_len, num_features)
+        
+        # Add masks as 5th column
+        combined = torch.cat([
+            continuous_features, 
+            masks.unsqueeze(-1)
+        ], dim=-1)
+        
+        return combined

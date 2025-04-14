@@ -1,4 +1,4 @@
-device: gpu # gpu or cpu
+device: cpu # gpu or cpu
 
 # AISPreprocessor
 target_freq_in_minutes: 10

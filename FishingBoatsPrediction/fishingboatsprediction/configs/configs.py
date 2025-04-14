@@ -1,6 +1,8 @@
 import torch
 import yaml
 from datetime import datetime
+import os
+import shutil
 
 class DefaultConfig:
     def __init__(self, config_path = "fishingboatsprediction/configs/default_config.yaml"):
@@ -61,6 +63,9 @@ class DefaultConfig:
         now = datetime.now()
         timestamp = now.strftime("%Y%m%d_%H%M%S")
         self.output_dir = f"{data["output_dir"]}/{timestamp}"
+        os.makedirs(self.output_dir, exist_ok=True)
+        
+        shutil.copy2(config_path, f"{self.output_dir}/config.yaml")
 
 class TestConfig(DefaultConfig):
     def __init__(self, config_path="fishingboatsprediction/configs/test_config.yaml"):

@@ -140,6 +140,15 @@ class AISUNet(nn.Module):
         
         return output
     
+    def load(self, model_path):
+        print(f"Loading model from '{model_path}'")
+        checkpoint = torch.load(model_path)
+        if "model_state_dict" in checkpoint:
+            model_state_dict = checkpoint["model_state_dict"]
+        else:
+            model_state_dict = checkpoint
+        self.load_state_dict(model_state_dict)
+        
 class AISNoiseScheduler:
     """Improved noise scheduler with cosine schedule option"""
     def __init__(self, 

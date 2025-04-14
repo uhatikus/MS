@@ -1,63 +1,48 @@
 from typing import Dict
-import pickle
 import os
+import pickle
+import shutil
 
 from clearml import Task
 from torch.utils.data import DataLoader
 
-from configs.configs import DefaultConfig, TestConfig
-from datasets.FishingAISDataset import FishingAISDataset
-from datasets.AISPreprocessor import AISPreprocessor
-from models.AIStableDiffusion import AISNoiseScheduler
-from trainers.AIStableDiffusionTrainer import AIStableDiffusionTrainer
-from utils import set_seed
-from models import AISUNet
+from fishingboatsprediction.configs.configs import DefaultConfig, TestConfig
+from fishingboatsprediction.datasets.AISPreprocessor import AISPreprocessor
+from fishingboatsprediction.models.AIStableDiffusion import AISNoiseScheduler
+from fishingboatsprediction.trainers.AIStableDiffusionTrainer import AIStableDiffusionTrainer
+from fishingboatsprediction.utils import set_seed, get_dataloaders
+from fishingboatsprediction.models import AISUNet
 
 set_seed(42)
 
-def get_dataloaders(config: DefaultConfig) -> Dict[str, DataLoader]:  
-    dataloaders: Dict[DataLoader] = {}  
-    phases = ["train", "validation", "test"]
-    
-    print("Dataset Information:")
-    print("-" * 50)
-    
-    for phase in phases:
-        datapath = os.path.join(config.dataset_dir, f"X_{phase}.pkl")
-        with open(datapath, "rb") as f:
-            data = pickle.load(f)
-        dataset = FishingAISDataset(data, config.onehot_sizes)
-        dataloaders[phase] = DataLoader(dataset,
-                                        batch_size=config.batch_size,
-                                        shuffle = (phase == "train"))
-        
-        print(f"{phase.capitalize()} Dataset:")
-        print(f"\tNumber of samples: {len(dataset)}")
-        print(f"\tBatch size: {config.batch_size}")
-        print(f"\tNumber of batches: {len(dataloaders[phase])}")
-        if hasattr(dataset, '__getitem__') and len(dataset) > 0:
-            one_hot_feature_sample, mask_sample = dataset[0]
-            print(f"\tOne_hot_feature_sample size: {one_hot_feature_sample.size()}")
-            print(f"\tMask_sample size: {mask_sample.size()}")
-        print("-" * 50)
-        
-    return dataloaders
-
 def run_experiment_with_clearml():
-    # config: DefaultConfig = DefaultConfig()
-    print("Reading config...")
-    config: DefaultConfig = TestConfig()
-    print("Config is ready.")
-    # Initialize a ClearML task
     clearml_task: Task = Task.init(
         project_name="Fishing Boats: AIStable Diffusion",
-        task_name="Test 0",
+        task_name="Test 0.1",
         # Add these for better reproducibility:
         output_uri=True,  # Auto-upload artifacts to ClearML server
         auto_connect_frameworks=True,  # Auto-log PyTorch/TensorFlow/Keras
     )
-    clearml_task.connect(config, name="config")  # Explicitly name the config
     
+    run_experiment(clearml_task)
+    
+def run_experiment(clearml_task: Task | None  = None):
+    if clearml_task is None:
+        print("Running the experiment without ClearML")
+    else:
+        print("Running the experiment WITH ClearML")
+    # config: DefaultConfig = DefaultConfig()
+    print("Reading config...")
+    config: DefaultConfig = TestConfig()
+    print("Config is ready.")
+    
+    if clearml_task is not None:
+        clearml_task.connect(config, name="config")  # Explicitly name the config
+        with open(f'{config.output_dir}/metadata.txt', 'w') as f:   
+            info = f"""{clearml_task.get_output_log_web_page()}
+            """
+            f.write(info)
+       
     
     ## Data
     # ===============================
@@ -96,7 +81,40 @@ def run_experiment_with_clearml():
     
     ## Testing
     # ===============================
-    trainer.generate_test_samples()
+    trainer.generate_test_samples(only_one=True) # only_one=True to create only one sample for testing purposes
+    
+def test_model(model_dir, model_name):
+    config_path=f"{model_dir}/config.yaml"
+    config: DefaultConfig = DefaultConfig(config_path)
+    dataloaders: Dict[DataLoader] = get_dataloaders(config, phases=["test"])
+
+    ## Model and Scheduler
+    # ===============================
+    model: AISUNet = AISUNet(config).to(config.device)
+    scheduler: AISNoiseScheduler = AISNoiseScheduler(config)
+
+    # Load the trained model weights
+    model_path = f"{model_dir}/{model_name}"
+    model.load(model_path)
+    
+    # copy model, just in case
+    shutil.copy2(model_path, f"{config.output_dir}/{model_name}")
+
+    ## Trainer
+    # ===============================
+    trainer: AIStableDiffusionTrainer = AIStableDiffusionTrainer(config, model, scheduler, dataloaders)
+
+    ## Testing
+    # ===============================
+    _, reconstructed_samples_np = trainer.generate_test_samples()
+    
+    datapath = os.path.join(config.dataset_dir, "X_test.pkl")
+    with open(datapath, "rb") as f:
+        original_samples = pickle.load(f)
+    
+    AISPreprocessor.plot_individual_trajectory_comparisons(original_samples, reconstructed_samples_np, output_dir=config.output_dir)
 
 if __name__ == "__main__":
-    run_experiment_with_clearml()
+    # run_experiment()
+    # run_experiment_with_clearml()
+    test_model(model_dir="results/test_1/20250414_192606", model_name="best_model_1.pth")

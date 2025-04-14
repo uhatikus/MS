@@ -17,6 +17,7 @@ from clearml import Task, Logger
 
 from configs.configs import DefaultConfig
 from models.AIStableDiffusion import AISNoiseScheduler, AISUNet
+from fishingboatsprediction.datasets.FishingAISDataset import FishingAISDataset
 
 class AIStableDiffusionTrainer:
     def __init__(self, config: DefaultConfig, model: AISUNet, scheduler: AISNoiseScheduler, dataloaders: Dict[str, DataLoader], clearml_task: Task | None = None):
@@ -64,7 +65,28 @@ class AIStableDiffusionTrainer:
             if validation_loss < best_validation_loss:
                 best_validation_loss = validation_loss
                 self._save_checkpoint(epoch, validation_loss, f'best_model_{epoch}.pth')
-                        
+            
+            if self.clearml_task is not None:
+                logger = self.clearml_task.get_logger()
+                logger.report_scalar(
+                    title="Training Loss", 
+                    series="Batch Loss", 
+                    value=train_loss, 
+                    iteration=epoch
+                )
+                logger.report_scalar(
+                    title="Validation Loss", 
+                    series="Batch Loss", 
+                    value=validation_loss, 
+                    iteration=epoch
+                )
+                # Log LR (since you're using a scheduler)
+                logger.report_scalar(
+                    title="Learning Rate", 
+                    series="LR", 
+                    value=self.optimizer.param_groups[0]['lr'], 
+                    iteration=epoch
+                )
         # Plot losses
         self._plot_losses(train_losses, validation_losses)
                 
@@ -113,21 +135,7 @@ class AIStableDiffusionTrainer:
         self.lr_scheduler.step()
         train_loss = total_loss / len(self.dataloaders["train"])
         
-        if self.clearml_task is not None:
-            logger = self.clearml_task.get_logger()
-            logger.report_scalar(
-                title="Training Loss", 
-                series="Batch Loss", 
-                value=loss.item(), 
-                iteration=batch_idx + epoch * len(self.dataloaders["train"])
-            )
-            # Log LR (since you're using a scheduler)
-            logger.report_scalar(
-                title="Learning Rate", 
-                series="LR", 
-                value=self.optimizer.param_groups[0]['lr'], 
-                iteration=epoch
-            )
+
         
         return train_loss
     
@@ -194,14 +202,22 @@ class AIStableDiffusionTrainer:
         )
         fig.write_html(os.path.join(self.config.output_dir, 'loss_curve.html'))
         fig.write_image(os.path.join(self.config.output_dir, 'loss_curve.png'))
+        
+        if self.clearml_task is not None:
+            self.logger.report_plotly(
+                title="Training and Validation losses",
+                series="", 
+                figure=fig
+            )
     
     @torch.no_grad()
-    def generate_test_samples(self):
+    def generate_test_samples(self, only_one: bool = False):
         """Generate samples from test dataloader
         """
         self.model.eval()
         
-        all_samples = []
+        raw_samples = []
+        reconstructed_samples = []
         
         for i, (one_hot_features, masks) in enumerate(self.dataloaders["test"]):
             # Move to device
@@ -234,21 +250,31 @@ class AIStableDiffusionTrainer:
                     ) * masks.unsqueeze(-1)
                 )
                 
-            if i == 0:
-                self.compare_heatmaps_plotly(one_hot_features, noised_features, masks, sample_idx=0, filename = "test_sample")
+            noised_features = torch.clamp(noised_features, 0, 1)
             
-            all_samples.append(noised_features.cpu())
-            break
+            noised_features_cpu = noised_features.cpu()
+            raw_samples.append(noised_features_cpu)
             
-        
-        all_samples = np.concatenate(all_samples, axis=0)
-        
-        with open(f"{self.config.output_dir}/all_samples.pkl", 'wb') as file:
-            pickle.dump(all_samples, file)
+            reconstructed = FishingAISDataset.one_hot_to_continuous(noised_features_cpu, masks, self.config.onehot_sizes)
+            reconstructed_samples.append(reconstructed)
                 
-        return all_samples    
+            if i == 0:
+                self.compare_heatmaps_plotly(one_hot_features, noised_features, masks, sample_idx=i, filename = "test_sample")
+            
+            if only_one:
+                break
+            
+        raw_samples_np = np.concatenate(raw_samples, axis=0)
+        reconstructed_samples_np = np.concatenate(reconstructed_samples, axis=0)
+        
+        with open(f"{self.config.output_dir}/raw_samples.pkl", 'wb') as file:
+            pickle.dump(raw_samples_np, file)
+        with open(f"{self.config.output_dir}/reconstructed_samples.pkl", 'wb') as file:
+            pickle.dump(reconstructed_samples_np, file)
+                
+        return raw_samples_np, reconstructed_samples_np  
     
-    def compare_heatmaps_plotly(self, original, noised, mask, sample_idx: int = 0, filename: str = "noizing_sample", add_red: bool = False):
+    def compare_heatmaps_plotly(self, original, noised, mask, sample_idx: int = 0, filename: str = "noizing_sample", add_red: bool = True):
         """
         Args:
             original (torch.Tensor): [2, 16, 622] (one_hot_features)
@@ -301,9 +327,8 @@ class AIStableDiffusionTrainer:
             for pos in np.where(mask_np == 1)[0]:
                 fig.add_shape(
                     type="rect",
-                    x0=-0.5, x1=621.5,  # Cover full width (622 columns)
+                    x0=-0.5, x1=sum(self.config.onehot_sizes) - 0.5,  # Cover full width (622 columns)
                     y0=pos-0.5, y1=pos+0.5,
-                    line=dict(color="red", width=2),
                     fillcolor="rgba(255,0,0,0.2)",
                     row=1, col=2
                 )
@@ -317,11 +342,12 @@ class AIStableDiffusionTrainer:
             yaxis_title="Sequence Position (16)",
         )
 
-        fig.write_html(os.path.join(self.config.output_dir, f'{filename}.html'))
-        fig.write_image(os.path.join(self.config.output_dir, f'{filename}.png'))
-        self.logger.report_plotly(
-            title="Heatmap Comparison", 
-            series=f"Sample_{sample_idx}", 
-            figure=fig
-        )
+        fig.write_html(os.path.join(self.config.output_dir, f'{filename}_{sample_idx}.html'))
+        fig.write_image(os.path.join(self.config.output_dir, f'{filename}_{sample_idx}.png'))
+        if self.clearml_task is not None:
+            self.logger.report_plotly(
+                title="Test vs Prediction Comparison", 
+                series=f"Sample_{sample_idx}", 
+                figure=fig
+            )
     

@@ -2,28 +2,17 @@ from dataclasses import dataclass
 import glob
 from typing import List, Dict
 import plotly.express as px
+import plotly.graph_objects as go
 import pickle
 import os
 
+import numpy as np
+import pandas as pd
 
 from pyproj import CRS, Transformer
 from fishingboatsprediction.utils import set_seed
 
 from fishingboatsprediction.configs.configs import DefaultConfig, TestConfig
-
-# Import GPU-accelerated libraries
-try:
-    import cupy as np
-    import cudf as pd
-    from cudf import DataFrame
-    GPU_AVAILABLE = True
-    print("GPU AVAILABLE")
-except ImportError:
-    import numpy as np
-    import pandas as pd
-    from pandas import DataFrame
-    GPU_AVAILABLE = False
-    print("GPU NOT AVAILABLE")
     
 set_seed(42)
 
@@ -192,14 +181,27 @@ class AISPreprocessor:
         print("X_validation shape:", X_validation.shape)
         print("X_test shape:", X_test.shape)
         
-        with open(f'{self.dataset_dir}/metadata.txt', 'w') as f:
-            f.write(f"X_train shape: {X_train.shape}\n")
-            f.write(f"X_validation shape: {X_validation.shape}\n")
-            f.write(f"X_test shape: {X_test.shape}\n")
-            
-            f.write(f"Train dates: {[x[0] for x in train_data]}\n")
-            f.write(f"Validation dates: {[x[0] for x in validation_data]}\n")
-            f.write(f"Test dates: {[x[0] for x in test_data]}\n")
+        with open(f'{self.dataset_dir}/metadata.txt', 'w') as f:            
+            info = f"""
+self.min_lat: {self.min_lat}
+self.max_lat: {self.max_lat}
+self.min_lon: {self.min_lon}
+self.max_lon: {self.max_lon}
+
+self.local_lat_scale: {self.local_lat_scale}
+self.local_lon_scale: {self.local_lon_scale}
+self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
+self.latlon_scale: {self.latlon_scale}
+
+X_train shape: {X_train.shape}
+X_validation shape: {X_validation.shape}
+X_test shape: {X_test.shape}
+
+Train dates: {[x[0] for x in train_data]}
+Validation dates: {[x[0] for x in validation_data]}
+Test dates: {[x[0] for x in test_data]}
+"""
+            f.write(info)
     
     def read_all_boats_trajectories(self):
         all_boats_trajectories = {}
@@ -610,6 +612,104 @@ self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
             fig.update_xaxes(range=[0, 1])
             fig.update_yaxes(range=[0, 1])
             fig.write_image(f"{base_path}{i}_norm.png")
+
+    @staticmethod
+    def plot_individual_trajectory_comparisons(original, reconstructed, output_dir,
+                                            x_col=0, y_col=1, mask_col=4):
+        """
+        Plot overlaid trajectory comparisons for each sample with continuous reconstructed line.
+        
+        Args:
+            original: numpy array of shape (samples_num, seq_len, feature_len)
+            reconstructed: numpy array of same shape as original
+            output_dir: directory to save figures
+            x_col: column index to use as x coordinate
+            y_col: column index to use as y coordinate
+            mask_col: column index to use as mask (0=preserved, 1=predicted)
+        """
+        # Create output directory if it doesn't exist
+        os.makedirs(output_dir, exist_ok=True)
+        
+        figures = []
+        samples_num = original.shape[0]
+        
+        for sample_idx in range(samples_num):
+            # Get data for this sample
+            orig_sample = original[sample_idx]
+            recon_sample = reconstructed[sample_idx]
+            
+            # Extract coordinates and mask
+            orig_x = orig_sample[:, x_col]
+            orig_y = orig_sample[:, y_col]
+            recon_x = recon_sample[:, x_col]
+            recon_y = recon_sample[:, y_col]
+            mask = recon_sample[:, mask_col]
+            
+            # Create figure
+            fig = go.Figure()
+            
+            # Add original trajectory (full line)
+            fig.add_trace(go.Scatter(
+                x=orig_x,
+                y=orig_y,
+                mode='lines+markers',
+                name='Original',
+                line=dict(color='blue', width=2),
+                marker=dict(color='blue', size=6),
+                hoverinfo='text+name'
+            ))
+            
+            # Create continuous reconstructed line with color changes
+            # We'll create segments between each pair of points
+            for i in range(len(recon_x)-1):
+                segment_color = 'red' if mask[i] == 1 or mask[i+1] == 1 else 'green'
+                segment_style = 'dash' if mask[i] == 1 or mask[i+1] == 1 else 'solid'
+                
+                fig.add_trace(go.Scatter(
+                    x=recon_x[i:i+2],
+                    y=recon_y[i:i+2],
+                    mode='lines',
+                    line=dict(color=segment_color, width=2, dash=segment_style),
+                    showlegend=False,
+                    hoverinfo='none'
+                ))
+            
+            # Add markers for reconstructed points with different symbols based on mask
+            for i in range(len(recon_x)):
+                marker_color = 'red' if mask[i] == 1 else 'green'
+                marker_symbol = 'x' if mask[i] == 1 else 'circle'
+                
+                fig.add_trace(go.Scatter(
+                    x=[recon_x[i]],
+                    y=[recon_y[i]],
+                    mode='markers',
+                    marker=dict(color=marker_color, size=8, symbol=marker_symbol),
+                    name='Predicted' if mask[i] == 1 else 'Preserved',
+                    showlegend=True if ((mask[i] == 1 and i == np.where(mask == 1)[0][0]) or 
+                                    (mask[i] == 0 and i == np.where(mask == 0)[0][0])) else False,
+                    legendgroup='predicted' if mask[i] == 1 else 'preserved',
+                    hoverinfo='text+name'
+                ))
+            
+            # Update layout
+            fig.update_layout(
+                title=f'Trajectory Comparison - Sample {sample_idx}',
+                xaxis_title='X Coordinate',
+                yaxis_title='Y Coordinate',
+                legend_title='Trajectory Parts',
+                hovermode='closest',
+                width=800,
+                height=600,
+                showlegend=True
+            )
+            
+            # Save figures
+            fig.write_html(f"{output_dir}/trajectory_sample_{sample_idx}.html")
+            fig.write_image(f"{output_dir}/trajectory_sample_{sample_idx}.png")
+            
+            figures.append(fig)
+        
+        return figures
 
 if __name__ == "__main__":
     config: DefaultConfig = TestConfig()
