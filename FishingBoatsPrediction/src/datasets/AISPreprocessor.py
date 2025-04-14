@@ -182,9 +182,9 @@ class AISPreprocessor:
             f.write(f"X_validation shape: {X_validation.shape}\n")
             f.write(f"X_test shape: {X_test.shape}\n")
             
-            f.write("Train dates:", [x[0] for x in train_data])
-            f.write("Validation dates:", [x[0] for x in validation_data])
-            f.write("Test dates:", [x[0] for x in test_data])
+            f.write(f"Train dates: {[x[0] for x in train_data]}\n")
+            f.write(f"Validation dates: {[x[0] for x in validation_data]}\n")
+            f.write(f"Test dates: {[x[0] for x in test_data]}\n")
     
     def read_all_boats_trajectories(self):
         all_boats_trajectories = {}
