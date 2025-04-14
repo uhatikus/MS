@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-from configs.configs import DefaultConfig
+from fishingboatsprediction.configs.configs import DefaultConfig
 
 class TimeEmbedding(nn.Module):
     """Improved time embedding with sinusoidal positional encoding"""

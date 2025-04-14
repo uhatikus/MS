@@ -5,13 +5,13 @@ import os
 from clearml import Task
 from torch.utils.data import DataLoader
 
-from configs.configs import DefaultConfig, TestConfig
-from datasets.FishingAISDataset import FishingAISDataset
-from datasets.AISPreprocessor import AISPreprocessor
-from models.AIStableDiffusion import AISNoiseScheduler
-from trainers.AIStableDiffusionTrainer import AIStableDiffusionTrainer
-from utils import set_seed
-from models import AISUNet
+from fishingboatsprediction.configs.configs import DefaultConfig, TestConfig
+from fishingboatsprediction.datasets.FishingAISDataset import FishingAISDataset
+from fishingboatsprediction.datasets.AISPreprocessor import AISPreprocessor
+from fishingboatsprediction.models.AIStableDiffusion import AISNoiseScheduler
+from fishingboatsprediction.trainers.AIStableDiffusionTrainer import AIStableDiffusionTrainer
+from fishingboatsprediction.utils import set_seed
+from fishingboatsprediction.models import AISUNet
 
 set_seed(42)
 

@@ -4,27 +4,14 @@ from typing import List, Dict
 import plotly.express as px
 import pickle
 import os
-
+import numpy as np
+import pandas as pd
 
 from pyproj import CRS, Transformer
 from fishingboatsprediction.utils import set_seed
 
 from fishingboatsprediction.configs.configs import DefaultConfig, TestConfig
 
-# Import GPU-accelerated libraries
-try:
-    import cupy as np
-    import cudf as pd
-    from cudf import DataFrame
-    GPU_AVAILABLE = True
-    print("GPU AVAILABLE")
-except ImportError:
-    import numpy as np
-    import pandas as pd
-    from pandas import DataFrame
-    GPU_AVAILABLE = False
-    print("GPU NOT AVAILABLE")
-    
 set_seed(42)
 
 # Define the Coordinate Reference Systems

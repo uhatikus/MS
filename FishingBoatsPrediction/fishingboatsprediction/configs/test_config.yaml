@@ -25,7 +25,7 @@ base_channels: 16
 time_dim: 32
 
 # AISNoiseScheduler
-num_timesteps: 10 # 1000
+num_timesteps: 1000 # 1000
 beta_start: 0.0001
 beta_end: 0.02
 schedule: linear
@@ -33,11 +33,11 @@ schedule: linear
 # AIStableDiffusionTrainer
 learning_rate: 0.0006
 weight_decay: 0.1
-num_epochs: 1
+num_epochs: 100
 eta_min: 0.000001
 batch_size: 32 # 32
 use_snr_weighting: True
-log_interval: 10
+log_interval: 1000
 output_dir: results/test_1
 noise_magnitude: 0.33
 

@@ -15,8 +15,8 @@ import numpy as np
 
 from clearml import Task, Logger
 
-from configs.configs import DefaultConfig
-from models.AIStableDiffusion import AISNoiseScheduler, AISUNet
+from fishingboatsprediction.configs.configs import DefaultConfig
+from fishingboatsprediction.models.AIStableDiffusion import AISNoiseScheduler, AISUNet
 
 class AIStableDiffusionTrainer:
     def __init__(self, config: DefaultConfig, model: AISUNet, scheduler: AISNoiseScheduler, dataloaders: Dict[str, DataLoader], clearml_task: Task | None = None):
