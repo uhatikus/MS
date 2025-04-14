@@ -18,7 +18,7 @@ set_seed(42)
 def run_experiment_with_clearml():
     clearml_task: Task = Task.init(
         project_name="Fishing Boats: AIStable Diffusion",
-        task_name="Test 0.1",
+        task_name="Test 1",
         # Add these for better reproducibility:
         output_uri=True,  # Auto-upload artifacts to ClearML server
         auto_connect_frameworks=True,  # Auto-log PyTorch/TensorFlow/Keras
@@ -31,9 +31,9 @@ def run_experiment(clearml_task: Task | None  = None):
         print("Running the experiment without ClearML")
     else:
         print("Running the experiment WITH ClearML")
-    # config: DefaultConfig = DefaultConfig()
     print("Reading config...")
-    config: DefaultConfig = TestConfig()
+    config: DefaultConfig = DefaultConfig()
+    # config: DefaultConfig = TestConfig()
     print("Config is ready.")
     
     if clearml_task is not None:
@@ -106,7 +106,7 @@ def test_model(model_dir, model_name):
 
     ## Testing
     # ===============================
-    _, reconstructed_samples_np = trainer.generate_test_samples()
+    _, reconstructed_samples_np = trainer.generate_test_samples(only_one=True)
     
     datapath = os.path.join(config.dataset_dir, "X_test.pkl")
     with open(datapath, "rb") as f:
@@ -116,5 +116,5 @@ def test_model(model_dir, model_name):
 
 if __name__ == "__main__":
     # run_experiment()
-    # run_experiment_with_clearml()
-    test_model(model_dir="results/test_1/20250414_192606", model_name="best_model_1.pth")
+    run_experiment_with_clearml()
+    # test_model(model_dir="results/test_1/20250412_082719", model_name="best_model_91.pth")

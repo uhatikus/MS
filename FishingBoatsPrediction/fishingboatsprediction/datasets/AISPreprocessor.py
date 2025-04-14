@@ -631,7 +631,7 @@ self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
         os.makedirs(output_dir, exist_ok=True)
         
         figures = []
-        samples_num = original.shape[0]
+        samples_num = reconstructed.shape[0]
         
         for sample_idx in range(samples_num):
             # Get data for this sample

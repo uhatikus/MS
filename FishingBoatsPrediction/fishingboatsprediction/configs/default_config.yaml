@@ -7,21 +7,21 @@ max_trajectory_sequence_len_to_predict: 8
 min_trajectory_sequence_len_to_predict: 4
 rotate_trajetories: True
 # cols = AISColumnNames()
-synthetic_ratio: 0.8
+synthetic_ratio: 0.7
 prediction_buffer: 1 
 validation_size_ratio: 0.15 # from 0 to 1
 test_size_ratio: 0.15 # from 0 to 1
 
 # FishingAISDataset
 # dataset_dir: data/datasets
-lat_size: 32
-lon_size: 32
-sog_size: 8
-cog_size: 16
-# lat_size: 250
-# lon_size: 270
-# sog_size: 32
-# cog_size: 72
+# lat_size: 32
+# lon_size: 32
+# sog_size: 8
+# cog_size: 16
+lat_size: 250
+lon_size: 270
+sog_size: 32
+cog_size: 72
 # sum shouuld be devided by 2^3 = 8
 
 # AISUNet
@@ -37,12 +37,12 @@ schedule: linear
 # AIStableDiffusionTrainer
 learning_rate: 0.0006
 weight_decay: 0.1
-num_epochs: 100
+num_epochs: 50
 eta_min: 0.000001
-batch_size: 2 # 32
+batch_size: 32 # 32
 use_snr_weighting: True
-log_interval: 50
-output_dir: results/test_1
+log_interval: 1000
+output_dir: results/test_2
 noise_magnitude: 0.33
 
 # not used yet

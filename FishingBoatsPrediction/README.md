@@ -9,6 +9,8 @@
 
 `poetry run python fishingboatsprediction/main.py`
 
+`nohup poetry run python fishingboatsprediction/main.py > "logs_$(date +'%Y-%m-%d_%H-%M-%S').txt" 2>&1 &l`
+
 For MacOS:
 brew install proj before pyproj
 
