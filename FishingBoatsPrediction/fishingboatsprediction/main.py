@@ -106,14 +106,21 @@ def test_model(model_dir, model_name):
 
     ## Testing
     # ===============================
-    _, reconstructed_samples_np = trainer.generate_test_samples(only_one=True)
     
     datapath = os.path.join(config.dataset_dir, "X_test.pkl")
     with open(datapath, "rb") as f:
         original_samples = pickle.load(f)
-    
-    AISPreprocessor.plot_individual_trajectory_comparisons(original_samples, reconstructed_samples_np, output_dir=config.output_dir)
+        
+    list_of_reconstructed_samples_np = []
+    N = 20
+    for i in range(N):
+        _, reconstructed_samples_np = trainer.generate_test_samples(only_one=True)
+        list_of_reconstructed_samples_np.append(reconstructed_samples_np)
 
+    
+    # AISPreprocessor.plot_individual_trajectory_comparisons(original_samples, reconstructed_samples_np, output_dir=config.output_dir)
+    AISPreprocessor.plot_probabilistic_trajectory_comparisons(original_samples, list_of_reconstructed_samples_np, output_dir=config.output_dir)
+    
 def continue_experiment_with_clearml(model_dir: str, model_name: str):
     clearml_task: Task = Task.init(
         project_name="Fishing Boats: AIStable Diffusion",
@@ -169,9 +176,11 @@ def continue_experiment(model_dir: str, model_name: str, clearml_task: Task | No
     trainer.generate_test_samples(only_one=True)
     
 if __name__ == "__main__":
+    print("Start")
     # run_experiment()
     # run_experiment_with_clearml()
     test_model(model_dir="results/test_2/20250415_084414", model_name="best_model_47.pth")
     # test_model(model_dir="results/test_1/20250414_192606", model_name="best_model_1.pth")
     # continue_experiment(model_dir="results/test_1/20250414_192606", model_name="best_model_1.pth")
     # continue_experiment_with_clearml(model_dir="results/test_1/20250414_192606", model_name="best_model_1.pth")
+    print("start")

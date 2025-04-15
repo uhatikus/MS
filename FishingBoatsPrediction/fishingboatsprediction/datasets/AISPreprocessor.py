@@ -3,11 +3,13 @@ import glob
 from typing import List, Dict
 import plotly.express as px
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 import pickle
 import os
 
 import numpy as np
 import pandas as pd
+from scipy.stats import gaussian_kde
 
 from pyproj import CRS, Transformer
 from fishingboatsprediction.utils import set_seed
@@ -660,7 +662,7 @@ self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
         
         Args:
             original: numpy array of shape (samples_num, seq_len, feature_len)
-            reconstructed: numpy array of same shape as original
+            reconstructed: numpy array of shape (samples_num, seq_len, feature_len)
             output_dir: directory to save figures
             x_col: column index to use as x coordinate
             y_col: column index to use as y coordinate
@@ -745,6 +747,195 @@ self.local_pseudo_lon_scale: {self.local_pseudo_lon_scale}
             # Save figures
             fig.write_html(f"{output_dir}/trajectory_sample_{sample_idx}.html")
             fig.write_image(f"{output_dir}/trajectory_sample_{sample_idx}.png")
+            
+            figures.append(fig)
+        
+        return figures
+
+    @staticmethod
+    def plot_probabilistic_trajectory_comparisons(original, reconstructed_list, output_dir,
+                                                x_col=0, y_col=1, mask_col=4,
+                                                bandwidth=None, grid_size=100):
+        """
+        Plot original trajectory with probabilistic heatmap of reconstructed trajectories.
+        
+        Args:
+            original: numpy array of shape (samples_num, seq_len, feature_len)
+            reconstructed_list: list of numpy arrays, each of shape (samples_num, seq_len, feature_len)
+                            Contains multiple reconstructions for each sample
+            output_dir: directory to save figures
+            x_col: column index to use as x coordinate
+            y_col: column index to use as y coordinate
+            mask_col: column index to use as mask (0=preserved, 1=predicted)
+            bandwidth: bandwidth for KDE estimation (if None, will use Scott's rule)
+            grid_size: resolution of the heatmap grid
+        """        
+        figures = []
+        samples_num = original.shape[0]
+        
+        for sample_idx in range(samples_num):
+            # Get original data for this sample
+            orig_sample = original[sample_idx]
+            orig_x = orig_sample[:, x_col]
+            orig_y = orig_sample[:, y_col]
+            
+            # Collect all reconstructed points for this sample
+            all_recon_points = []
+            for recon in reconstructed_list:
+                recon_sample = recon[sample_idx]
+                mask = recon_sample[:, mask_col]
+                
+                # Only include predicted points (mask == 1)
+                pred_points = recon_sample[mask == 1]
+                if len(pred_points) > 0:
+                    all_recon_points.append(pred_points[:, [x_col, y_col]])
+            
+            if len(all_recon_points) == 0:
+                print(f"No predicted points found for sample {sample_idx}")
+                continue
+                
+            all_recon_points = np.vstack(all_recon_points)
+            
+            # Create figure with subplots
+            fig = go.Figure()
+            
+            # Calculate KDE
+            try:
+                kde = gaussian_kde(all_recon_points.T, bw_method=bandwidth)
+            except Exception as e:
+                print(f"KDE calculation failed for sample {sample_idx} - possibly all points are identical. Error: {e}")
+                continue
+            
+            # Create grid for KDE evaluation
+            xmin, xmax = all_recon_points[:, 0].min(), all_recon_points[:, 0].max()
+            ymin, ymax = all_recon_points[:, 1].min(), all_recon_points[:, 1].max()
+            x_range = xmax - xmin
+            y_range = ymax - ymin
+            
+            # Add some padding to the range
+            xmin, xmax = xmin - 0.1*x_range, xmax + 0.1*x_range
+            ymin, ymax = ymin - 0.1*y_range, ymax + 0.1*y_range
+            
+            # Create grid
+            xgrid = np.linspace(xmin, xmax, grid_size)
+            ygrid = np.linspace(ymin, ymax, grid_size)
+            X, Y = np.meshgrid(xgrid, ygrid)
+            grid_points = np.vstack([X.ravel(), Y.ravel()])
+            
+            # Evaluate KDE on grid
+            try:
+                Z = kde(grid_points).reshape(X.shape)
+            except Exception as e:
+                print(f"KDE evaluation failed for sample {sample_idx}: Error: {e}")
+                continue
+            
+            # Normalize Z to [0,1] for better color scaling
+            Z = (Z - Z.min()) / (Z.max() - Z.min())
+            
+            # Add heatmap to both subplots
+            fig.add_trace(go.Heatmap(
+                x=xgrid,
+                y=ygrid,
+                z=Z,
+                colorscale='Blues',
+                showscale=True,
+                opacity=0.7,
+                name='Probability Density'
+            ))
+            
+            # Add original trajectory to first subplot
+            fig.add_trace(go.Scatter(
+                x=orig_x,
+                y=orig_y,
+                mode='lines+markers',
+                name='Original Trajectory',
+                line=dict(color='blue', width=2),
+                marker=dict(color='blue', size=6),
+                hoverinfo='text+name'
+            ))
+            
+            # Add contour lines to heatmap-only plot for better visualization
+            fig.add_trace(go.Contour(
+                x=xgrid,
+                y=ygrid,
+                z=Z,
+                colorscale='Blues',
+                showscale=False,
+                name='Contour Lines',
+                line_width=1
+            ))
+            
+            # Add all reconstructed points as semi-transparent markers
+            fig.add_trace(go.Scatter(
+                x=all_recon_points[:, 0],
+                y=all_recon_points[:, 1],
+                mode='markers',
+                name='Reconstructed Points',
+                marker=dict(color='rgba(255, 0, 0, 0.2)', size=5),
+                hoverinfo='none',
+                showlegend=True
+            ))
+            
+            # Add markers for reconstructed preserved points
+            recon_sample = reconstructed_list[0][sample_idx]
+            recon_x = recon_sample[:, x_col]
+            recon_y = recon_sample[:, y_col]
+            for i in range(len(recon_x)):
+                if mask[i] == 1:
+                    continue
+                marker_color = 'red' if mask[i] == 1 else 'green'
+                marker_symbol = 'x' if mask[i] == 1 else 'circle'
+                
+                fig.add_trace(go.Scatter(
+                    x=[recon_x[i]],
+                    y=[recon_y[i]],
+                    mode='markers',
+                    marker=dict(color=marker_color, size=8, symbol=marker_symbol),
+                    name='Predicted' if mask[i] == 1 else 'Preserved',
+                    showlegend=True if ((mask[i] == 1 and i == np.where(mask == 1)[0][0]) or 
+                                    (mask[i] == 0 and i == np.where(mask == 0)[0][0])) else False,
+                    legendgroup='predicted' if mask[i] == 1 else 'preserved',
+                    hoverinfo='text+name'
+                ))
+            
+            # Create continuous reconstructed line with color changes
+            # We'll create segments between each pair of points
+            for i in range(len(recon_x)-1):
+                if mask[i] == 1 or mask[i+1] == 1:
+                    continue
+                segment_color = 'red' if mask[i] == 1 or mask[i+1] == 1 else 'green'
+                segment_style = 'dash' if mask[i] == 1 or mask[i+1] == 1 else 'solid'
+                
+                fig.add_trace(go.Scatter(
+                    x=recon_x[i:i+2],
+                    y=recon_y[i:i+2],
+                    mode='lines',
+                    line=dict(color=segment_color, width=2, dash=segment_style),
+                    showlegend=False,
+                    hoverinfo='none'
+                ))
+            
+            # Update layout
+            fig.update_layout(
+                title_text=f'Probabilistic Trajectory Comparison - Sample {sample_idx}',
+                width=1200,
+                height=600,
+                showlegend=True,
+                legend=dict(
+                    x=1.05,  # Adjust x position (1.05 places it slightly outside the right edge)
+                    y=1.1,      # Adjust y position (1 places it at the top)
+                    xanchor='left', # Anchor the left side of the legend to the specified x position
+                    yanchor='top'  # Anchor the top of the legend to the specified y position
+                )
+            )
+            
+            # Update xaxis and yaxis properties
+            fig.update_xaxes(title_text="X Coordinate")
+            fig.update_yaxes(title_text="Y Coordinate")
+            
+            # Save figures
+            fig.write_html(f"{output_dir}/prob_trajectory_sample_{sample_idx}.html")
+            fig.write_image(f"{output_dir}/prob_trajectory_sample_{sample_idx}.png")
             
             figures.append(fig)
         
