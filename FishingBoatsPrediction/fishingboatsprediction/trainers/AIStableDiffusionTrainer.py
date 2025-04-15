@@ -259,8 +259,10 @@ class AIStableDiffusionTrainer:
             reconstructed_cpu = reconstructed.cpu()
             reconstructed_samples.append(reconstructed_cpu)
                 
-            if i == 0:
-                self.compare_heatmaps_plotly(one_hot_features, noised_features, masks, sample_idx=i, filename = "test_sample")
+            # if i == 0:
+            for j in range(batch_size):
+                self.compare_heatmaps_plotly(one_hot_features, noised_features, masks, sample_idx=j, filename = "test_sample")
+                break
             
             if only_one:
                 break

@@ -18,7 +18,7 @@ set_seed(42)
 def run_experiment_with_clearml():
     clearml_task: Task = Task.init(
         project_name="Fishing Boats: AIStable Diffusion",
-        task_name="Test 1",
+        task_name="Test 2",
         # Add these for better reproducibility:
         output_uri=True,  # Auto-upload artifacts to ClearML server
         auto_connect_frameworks=True,  # Auto-log PyTorch/TensorFlow/Keras
@@ -116,5 +116,5 @@ def test_model(model_dir, model_name):
 
 if __name__ == "__main__":
     # run_experiment()
-    run_experiment_with_clearml()
-    # test_model(model_dir="results/test_1/20250412_082719", model_name="best_model_91.pth")
+    # run_experiment_with_clearml()
+    test_model(model_dir="results/test_2/20250415_084414", model_name="best_model_47.pth")
