@@ -114,7 +114,64 @@ def test_model(model_dir, model_name):
     
     AISPreprocessor.plot_individual_trajectory_comparisons(original_samples, reconstructed_samples_np, output_dir=config.output_dir)
 
+def continue_experiment_with_clearml(model_dir: str, model_name: str):
+    clearml_task: Task = Task.init(
+        project_name="Fishing Boats: AIStable Diffusion",
+        task_name="Continue Test 2",
+        # Add these for better reproducibility:
+        output_uri=True,  # Auto-upload artifacts to ClearML server
+        auto_connect_frameworks=True,  # Auto-log PyTorch/TensorFlow/Keras
+    )
+    
+    continue_experiment(model_dir, model_name, clearml_task)
+    
+def continue_experiment(model_dir: str, model_name: str, clearml_task: Task | None  = None):
+    if clearml_task is None:
+        print("Running the experiment without ClearML")
+    else:
+        print("Running the experiment WITH ClearML")
+    print("Reading config...")
+    
+    # Load config from the existing experiment
+    config_path = f"{model_dir}/config.yaml"
+    config: DefaultConfig = TestConfig(config_path)
+    print("Config is ready.")
+    
+    # Connect config to ClearML if using it
+    if clearml_task is not None:
+        clearml_task.connect(config, name="config")  # Explicitly name the config
+        with open(f'{config.output_dir}/metadata.txt', 'w') as f:   
+            info = f"""{clearml_task.get_output_log_web_page()}
+            """
+            f.write(info)
+    
+    # Get dataloaders
+    dataloaders: Dict[DataLoader] = get_dataloaders(config)
+    
+    # Initialize model and scheduler
+    model: AISUNet = AISUNet(config).to(config.device)
+    scheduler: AISNoiseScheduler = AISNoiseScheduler(config)
+    
+    # Load the existing model weights
+    model_path = f"{model_dir}/{model_name}"
+    model.load(model_path)
+    print(f"Loaded model weights from {model_path}")
+    
+    # Initialize trainer
+    trainer: AIStableDiffusionTrainer = AIStableDiffusionTrainer(
+        config, model, scheduler, dataloaders, clearml_task
+    )
+    
+    # Continue training
+    trainer.train()
+    
+    # Generate test samples
+    trainer.generate_test_samples(only_one=True)
+    
 if __name__ == "__main__":
     # run_experiment()
     # run_experiment_with_clearml()
     test_model(model_dir="results/test_2/20250415_084414", model_name="best_model_47.pth")
+    # test_model(model_dir="results/test_1/20250414_192606", model_name="best_model_1.pth")
+    # continue_experiment(model_dir="results/test_1/20250414_192606", model_name="best_model_1.pth")
+    # continue_experiment_with_clearml(model_dir="results/test_1/20250414_192606", model_name="best_model_1.pth")
