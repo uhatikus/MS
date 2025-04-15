@@ -7,7 +7,7 @@ max_trajectory_sequence_len_to_predict: 8
 min_trajectory_sequence_len_to_predict: 4
 rotate_trajetories: True
 # cols = AISColumnNames()
-synthetic_ratio: 0.7
+synthetic_ratio: 0.75
 prediction_buffer: 1 
 validation_size_ratio: 0.15 # from 0 to 1
 test_size_ratio: 0.15 # from 0 to 1

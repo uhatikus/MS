@@ -134,7 +134,7 @@ def continue_experiment(model_dir: str, model_name: str, clearml_task: Task | No
     
     # Load config from the existing experiment
     config_path = f"{model_dir}/config.yaml"
-    config: DefaultConfig = TestConfig(config_path)
+    config: DefaultConfig = DefaultConfig(config_path)
     print("Config is ready.")
     
     # Connect config to ClearML if using it
