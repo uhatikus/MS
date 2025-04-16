@@ -2,7 +2,7 @@
 
 Welcome to the MS repository!
 
-This repository contains project developed as part of my master's thesis. Each project resides in its own subdirectory with a dedicated README file for detailed information.
+This repository contains project developed as part of my master's thesis.
 
 ## Fishing Boats Prediction
 
