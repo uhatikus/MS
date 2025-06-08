@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "fishingboatsprediction"
+version = "0.1.0"
+description = ""
+authors = ["Ukhatov Alexander <alexander.ukhatov@gmail.com>"]
+readme = "README.md"
+packages = [{ include = "fishingboatsprediction", from = "." }]
+
+[tool.poetry.dependencies]
+python = "^3.12, <3.14"
+ipykernel = "^6.29.5"
+plotly = "^5.24.1"
+nbformat = "^5.10.4"
+clearml = "^1.17.1"
+numpy = "1.26.4"
+pandas = "^2.2.3"
+scipy = "^1.15.2"
+pyproj = "^3.7.1"
+kaleido = "0.2.1"
+tqdm = "^4.67.1"
+tslearn = "^0.6.3"
+scikit-learn = "^1.6.1"
+folium = "^0.19.6"
+hdbscan = "^0.8.40"
+matplotlib = "^3.10.3"
+geopandas = "^1.0.1"
+movingpandas = "^0.22.3"
+fiona = "^1.10.1"
+geoviews = "^1.14.0"
+hvplot = "^0.11.3"
+cartopy = "^0.24.1"
+holoviews = "^1.20.2"
+pydeck = "^0.9.1"
+pykalman = "^0.10.1"
+statsmodels = "^0.14.4"
+sqlalchemy = "^2.0.41"
+contextily = "^1.6.2"
+psycopg2-binary = "^2.9.10"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
