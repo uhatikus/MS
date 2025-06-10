@@ -1108,6 +1108,17 @@ files = [
 all = ["flake8 (>=7.1.1)", "mypy (>=1.11.2)", "pytest (>=8.3.2)", "ruff (>=0.6.2)"]
 
 [[package]]
+name = "importlib"
+version = "1.0.4"
+description = "Backport of importlib.import_module() from Python 2.7"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "importlib-1.0.4.zip", hash = "sha256:b6ee7066fea66e35f8d0acee24d98006de1a0a8a94a8ce6efe73a9a23c8d9826"},
+]
+
+[[package]]
 name = "ipykernel"
 version = "6.29.5"
 description = "IPython Kernel for Jupyter"
@@ -1784,6 +1795,19 @@ files = [
 ]
 
 [[package]]
+name = "nose"
+version = "1.3.7"
+description = "nose extends unittest to make testing easier"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "nose-1.3.7-py2-none-any.whl", hash = "sha256:dadcddc0aefbf99eea214e0f1232b94f2fa9bd98fa8353711dacb112bfcbbb2a"},
+    {file = "nose-1.3.7-py3-none-any.whl", hash = "sha256:9ff7c6cc443f8c51994b34a667bbcf45afd6d945be7477b52e97516fd17c53ac"},
+    {file = "nose-1.3.7.tar.gz", hash = "sha256:f1bffef9cbc82628f6e7d7b40d7e255aefaa1adb6a1b1d26c69a8b79e6208a98"},
+]
+
+[[package]]
 name = "numba"
 version = "0.61.2"
 description = "compiling Python code using LLVM"
@@ -2359,6 +2383,18 @@ files = [
 
 [package.extras]
 tests = ["pytest"]
+
+[[package]]
+name = "pycircstat"
+version = "0.0.2"
+description = "Toolbox for circular statistics with Python"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "pycircstat-0.0.2-py3-none-any.whl", hash = "sha256:5bf5362a4b99df4e4753eca4018fc2f19b57456605471dacabdda43e9b91d518"},
+    {file = "pycircstat-0.0.2.tar.gz", hash = "sha256:76c6c6a0d9b03e50c379deb0dc3d62781e5cfc0c5b45751ce13f6b3783049f34"},
+]
 
 [[package]]
 name = "pycparser"
@@ -3620,4 +3656,4 @@ files = [
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12, <3.14"
-content-hash = "5e8e4c477824494ca0c1dd7f785e16343bfa0c44b079019e9b975e9dbc3946c9"
+content-hash = "591834321a09131e955f0424d56465b2289050d7e4b9c04407fa85d6da93f32f"
